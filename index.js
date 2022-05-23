@@ -9,7 +9,6 @@ app.use(cors());
 app.use(express.json())
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.jooei.mongodb.net/?retryWrites=true&w=majority`;
-    console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run(){
@@ -20,8 +19,17 @@ async function run(){
         app.get('/product', async(req, res) =>{
             const query = {};
             const cursor = ProductsCollection.find(query);
-            const products = await (await cursor.toArray()).reverse()
+            const products = (await cursor.toArray()).reverse();
             res.send(products)
+
+            // find one
+            app.get('/product/:id', async(req, res)=>{
+              const id = req.params.id;
+              console.log(id);
+              const query = {_id: Object(id)};
+              const product = await ProductsCollection.findOne(query);
+              res.send(product);
+            })
         })
     }
     finally{
