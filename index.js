@@ -32,7 +32,7 @@ async function run() {
   try {
     await client.connect();
     const ProductsCollection = client.db('computer_parts_manufacturer').collection('products')
-    const bookingCollection = client.db('computer_parts_manufacturer').collection('booking')
+    const orderCollection = client.db('computer_parts_manufacturer').collection('booking')
     const userCollection = client.db('computer_parts_manufacturer').collection('users');
     const reviewsCollection = client.db('computer_parts_manufacturer').collection('reviews');
 
@@ -65,7 +65,7 @@ async function run() {
     
     app.post('/order', async (req, res) => {
       const booking = req.body;
-      const result = await bookingCollection.insertOne(booking)
+      const result = await orderCollection.insertOne(booking)
       res.send({ success: true, message: "Successfully ordered ", result });
     })
     
@@ -94,7 +94,7 @@ async function run() {
       const decodedEmail = req.decoded.email;
       if (orders === decodedEmail) {
         const query = { email: orders };
-        const result = await bookingCollection.find(query).toArray();
+        const result = await orderCollection.find(query).toArray();
         res.send(result)
         return;
       }
@@ -170,8 +170,39 @@ async function run() {
     app.delete('/items/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
-      const result = await bookingCollection.deleteOne(query);
+      const result = await orderCollection.deleteOne(query);
       res.send(result);
+    })
+
+
+    // payment start
+    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+      const service = req.body;
+      const price = service.price;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+      res.send({ clientSecret: paymentIntent.client_secret })
+    });
+
+
+    app.patch('/order/:id', verifyJWT, async(req, res) =>{
+      const id  = req.params.id;
+      const payment = req.body;
+      const filter = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId
+        }
+      }
+
+      const result = await paymentCollection.insertOne(payment);
+      const updatedOrder = await orderCollection.updateOne(filter, updatedDoc);
+      res.send(updatedOrder);
     })
 
   }
