@@ -20,7 +20,6 @@ function verifyJWT(req, res, next) {
     if (err) {
       return res.status(403).send({ message: 'Forbidden access' });
     }
-    console.log('decoded', decoded);
     req.decoded = decoded;
     next();
   })
@@ -42,6 +41,16 @@ async function run() {
       const cursor = ProductsCollection.find(query);
       const products = (await cursor.toArray()).reverse();
       res.send(products)
+    })
+
+
+    app.get('/users/:email', async (req, res) => {
+      console.log('api ');
+      const email = req.params.email;
+      const query = {email: email};
+      const cursor = await userCollection.findOne(query);
+      console.log(cursor);
+      res.send(cursor)
     })
 
     // find one
@@ -80,9 +89,6 @@ async function run() {
       res.send({ success: true, message: "product added ", result });
     })
 
-
-
-
     app.get('/order', verifyJWT, async (req, res) => {
       const orders = req.query.email;
       const decodedEmail = req.decoded.email;
@@ -116,17 +122,14 @@ async function run() {
 
     app.get('/admin/:email', async (req, res) => {
       const email = req.params.email;
-      console.log(email);
       const user = await userCollection.findOne({ email: email });
       const isAdmin = user.role === 'admin';
       res.send({ admin: isAdmin })
     })
-
+    
     app.put('/user/:email', async (req, res) => {
       const email = req.params.email;
-      console.log(email);
       const user = req.body;
-      console.log(user);
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
@@ -136,6 +139,27 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
       res.send({ result, token });
     })
+
+    app.get('/user', async (req, res) => {
+      const users = await userCollection.find().toArray();
+      res.send(users);
+    })
+    
+
+
+    app.put('/updateuser/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      res.send({success:true, result });
+    })
+
+
 
     app.get('/user', async (req, res) => {
       const users = await userCollection.find().toArray();
