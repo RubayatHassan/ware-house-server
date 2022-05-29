@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const { MongoClient, ObjectId } = require('mongodb');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -35,6 +36,7 @@ async function run() {
     const orderCollection = client.db('computer_parts_manufacturer').collection('booking')
     const userCollection = client.db('computer_parts_manufacturer').collection('users');
     const reviewsCollection = client.db('computer_parts_manufacturer').collection('reviews');
+    const paymentCollection = client.db('computer_parts_manufacturer').collection('payments');
 
     app.get('/product', async (req, res) => {
       const query = {};
@@ -45,11 +47,9 @@ async function run() {
 
 
     app.get('/users/:email', async (req, res) => {
-      console.log('api ');
       const email = req.params.email;
       const query = {email: email};
       const cursor = await userCollection.findOne(query);
-      console.log(cursor);
       res.send(cursor)
     })
 
@@ -158,7 +158,7 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send({success:true, result });
     })
-
+ 
 
 
     app.get('/user', async (req, res) => {
@@ -179,6 +179,7 @@ async function run() {
     app.post('/create-payment-intent', verifyJWT, async (req, res) => {
       const service = req.body;
       const price = service.price;
+      console.log(price);
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -203,8 +204,15 @@ async function run() {
       const result = await paymentCollection.insertOne(payment);
       const updatedOrder = await orderCollection.updateOne(filter, updatedDoc);
       res.send(updatedOrder);
-    })
+    });
 
+    app.get('/order/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      console.log(query);
+      const result = await orderCollection.findOne(query);
+      res.send(result);
+    })
   }
   finally {
 
