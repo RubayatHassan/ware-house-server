@@ -8,8 +8,22 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express()
 const port = process.env.PORT || 5000
 
-app.use(cors());
+// app.use(cors());
+// app.use(express.json())
+
+const corsConfig = {
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
+}
+app.use(cors(corsConfig))
+app.options("*", cors(corsConfig))
 app.use(express.json())
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*")
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept,authorization")
+  next()
+})
 
 function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -48,7 +62,7 @@ async function run() {
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email};
+      const query = { email: email };
       const cursor = await userCollection.findOne(query);
       res.send(cursor)
     })
@@ -61,16 +75,16 @@ async function run() {
       res.send(product);
     })
 
-    
-    
+
+
     app.post('/order', async (req, res) => {
       const booking = req.body;
       const result = await orderCollection.insertOne(booking)
       res.send({ success: true, message: "Successfully ordered ", result });
     })
-    
-    
-    app.get('/review', async(req, res)=>{
+
+
+    app.get('/review', async (req, res) => {
       const query = {}
       const result = await reviewsCollection.find(query).toArray()
       res.send(result)
@@ -111,7 +125,7 @@ async function run() {
           $set: { role: 'admin' },
         };
         const result = await userCollection.updateOne(filter, updateDoc);
-        res.send({success:true, message:'admin added' , result});
+        res.send({ success: true, message: 'admin added', result });
         return;
       }
       else (
@@ -126,7 +140,7 @@ async function run() {
       const isAdmin = user.role === 'admin';
       res.send({ admin: isAdmin })
     })
-    
+
     app.put('/user/:email', async (req, res) => {
       const email = req.params.email;
       const user = req.body;
@@ -144,7 +158,7 @@ async function run() {
       const users = await userCollection.find().toArray();
       res.send(users);
     })
-    
+
 
 
     app.put('/updateuser/:email', async (req, res) => {
@@ -156,9 +170,9 @@ async function run() {
         $set: user,
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
-      res.send({success:true, result });
+      res.send({ success: true, result });
     })
- 
+
 
 
     app.get('/user', async (req, res) => {
@@ -190,10 +204,10 @@ async function run() {
     });
 
 
-    app.patch('/order/:id', verifyJWT, async(req, res) =>{
-      const id  = req.params.id;
+    app.patch('/order/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
       const payment = req.body;
-      const filter = {_id: ObjectId(id)};
+      const filter = { _id: ObjectId(id) };
       const updatedDoc = {
         $set: {
           paid: true,
@@ -206,9 +220,9 @@ async function run() {
       res.send(updatedOrder);
     });
 
-    app.get('/order/:id', async(req, res) =>{
+    app.get('/order/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       console.log(query);
       const result = await orderCollection.findOne(query);
       res.send(result);
