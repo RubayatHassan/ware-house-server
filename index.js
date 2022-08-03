@@ -237,7 +237,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-  res.send('computer parts manufacturer!')
+  res.send('computer all parts manufacturer!')
 })
 
 app.listen(port, () => {
